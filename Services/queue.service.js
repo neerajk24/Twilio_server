@@ -22,6 +22,7 @@ class QueueService {
         const messageHandler = async (message) => {
             console.log(`Received message: ${message.body}`);
 
+
             try {
                 // Call all registered handlers
                 for (const handler of this.messageHandlers) {

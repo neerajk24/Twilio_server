@@ -7,6 +7,9 @@ import http from "http";
 import { queueService } from "./Services/queue.service.js";
 import Conversation from "./Models/chat.model.js";
 import dotenv from 'dotenv';
+import sgMail from '@sendgrid/mail';
+import getPhoneNumber from "./utils/emailService.js";
+
 
 dotenv.config();
 
@@ -34,12 +37,12 @@ const io = new Server(server, {
 
 let connectedSockets = [];
 let currentUser = null;
+let ListofUsers = [];
 
 io.on("connection", (socket) => {
   const Userid = socket.handshake.auth.userid;
   if (!connectedSockets.find((soc) => soc.Userid === Userid)) {
     console.log("A user connected", Userid);
-
     connectedSockets.push({
       socketId: socket.id,
       Userid,
@@ -52,16 +55,22 @@ io.on("connection", (socket) => {
       if (activeService === 'sms') {
         data.unreadSms = 0;
       }
-      else {
+      else if (activeService === 'whatsapp') {
         data.unreadCount = 0;
-
+      }
+      else {
+        data.unreadMails = 0;
       }
       await data.save();
     }
 
   })
-  socket.on('changeUser', (user) => {
-    currentUser = user;
+  socket.on('changeUser', ({chat}) => {
+    console.log(`User came : ${chat}`);
+    currentUser = chat;
+  })
+  socket.on('NewUsers', (list) => {
+    ListofUsers = list;
   })
   socket.on("disconnect", () => {
     connectedSockets = connectedSockets.filter(
@@ -76,26 +85,34 @@ export { io };
 
 queueService.addMessageHandler(async (messageData) => {
   console.log("Processing message:", messageData);
-  let from, to;
+  let from, to, phone;
   // For New service modify the sender and receiver here.
   if (messageData.type === 'sms') {
     from = messageData.from.slice(1);
     to = messageData.to.slice(1);
   }
-  else {
+  else if (messageData.type === 'whatsapp') {
     from = messageData.from.slice(10);
     to = messageData.to.slice(10);
   }
+  else {
+    from = messageData.from;
+    to = messageData.to;
+    phone = getPhoneNumber(from, ListofUsers);
+  }
   let unreadmsg = null;
+  // Making a new conversation if the sender is new..
   try {
-    let data = await Conversation.findOne({ participant: from });
+    let data = await Conversation.findOne({ participant: (messageData.type === 'mail') ? phone : from });
     if (!data) {
       data = new Conversation({
-        participant: from,
+        participant: messageData.type === 'mail' ? phone : from,
         messages: [],
         sms: [],
+        mails: [],
         unreadCount: 0,
-        unreadSms: 0
+        unreadSms: 0,
+        unreadMails: 0,
       });
       console.log("new Convo created Reciever side...");
     }
@@ -106,7 +123,7 @@ queueService.addMessageHandler(async (messageData) => {
     let contentType = "text";
     let contentLink = null;
 
-
+    // Handle media items here..
     if (messageData.mediaItems && messageData.mediaItems.length > 0) {
       contentType = messageData.mediaItems[0].contentType;
       contentLink = messageData.mediaItems[0].url;
@@ -117,34 +134,62 @@ queueService.addMessageHandler(async (messageData) => {
       receiver_id: to,
       content: messageData.message,
       messageSid: messageData.messageSid,
-      accountSid: messageData.accountSid,
+      accountSid: messageData.accountSid || null,
       content_type: contentType,
       content_link: contentLink,
       timestamp: mongodbTimestamp,
       is_read: false,
+      subject: messageData.subject,
     };
+
+    // handle unreadMessage logic here...
+    console.log(currentUser);
     if (messageData.type === 'sms') {
+      console.log("in SMS");
       if (currentUser !== null && currentUser.phoneNumber !== from) {
+        console.log("unreadSMS count increase..");
+
         data.unreadSms += 1;
       }
       if (currentUser === null) {
+        console.log("unreadSMS count increase..");
+
         data.unreadSms += 1;
+      }
+    }
+    else if (messageData.type === 'whatsapp') {
+      console.log("in whatsapp");
+      if (currentUser !== null && currentUser.phoneNumber !== from) {
+        console.log("unreadWhatsapp count increase..");
+        data.unreadCount += 1;
+      }
+      if (currentUser === null) {
+        console.log("unreadWhatsapp count increase..");
+        data.unreadCount += 1;
       }
     }
     else {
-      if (currentUser !== null && currentUser.phoneNumber !== from) {
-        data.unreadCount += 1;
+      console.log("IN mail");
+      console.log("from : " , from);
+      if (currentUser !== null && currentUser.Email !== from) {
+        console.log("unreadMail count increase..");
+        data.unreadMails += 1;
       }
       if (currentUser === null) {
-        data.unreadCount += 1;
+        console.log("unreadMail count increase..");
+        data.unreadMails += 1;
       }
     }
-    unreadmsg = messageData.type === 'sms' ? data.unreadSms : data.unreadCount;
+    unreadmsg = messageData.type === 'sms' ? data.unreadSms : (messageData.type === 'whatsapp') ? data.unreadCount : data.unreadMails;
+    // save data according to the message type here..
     if (messageData.type === 'sms') {
       data.sms.push(newMessage);
     }
-    else {
+    else if (messageData.type === 'whatsapp') {
       data.messages.push(newMessage);
+    }
+    else {
+      data.mails.push(newMessage);
     }
     await data.save();
     console.log("successfully saved message on reciever side..");
@@ -152,12 +197,22 @@ queueService.addMessageHandler(async (messageData) => {
       "Processed message in our message model:",
       JSON.stringify(newMessage, null, 2)
     );
-
+    // Handle the socket logic for different services here ..
     const SOCKET = connectedSockets.find((soc) => soc.Userid === to);
-    if (currentUser !== null && from === currentUser.phoneNumber) {
-      io.to(SOCKET.socketId).emit("receiveMessage", newMessage);
+    if (!SOCKET) {
+      return;
     }
-    io.to(SOCKET.socketId).emit("unreadMessages", { newMessage, unreadmsg });
+    if (messageData.type === 'mail') {
+      if (currentUser !== null && from === currentUser.Email) {
+        io.to(SOCKET.socketId).emit("receiveMessage", newMessage);
+      }
+    }
+    else {
+      if (currentUser !== null && from === currentUser.phoneNumber) {
+        io.to(SOCKET.socketId).emit("receiveMessage", newMessage);
+      }
+    }
+    io.to(SOCKET.socketId).emit("unreadMessages", { newMessage, unreadmsg, ListofUsers });
   } catch (error) {
     console.log("Error in storing message in reciever side", error.message);
   }
