@@ -4,7 +4,7 @@ import Conversation from "../../Models/chat.model.js";
 import axios from "axios";
 import { parseString } from "xml2js";
 import { promisify } from "util";
-import { sendWhatsAppMessage, sendSMSMessage , sendEmailMessage } from "../../Services/twilio.service.js";
+import { sendWhatsAppMessage, sendSMSMessage, sendEmailMessage } from "../../Services/twilio.service.js";
 import {
   generateAccountSASQueryParameters,
   AccountSASPermissions,
@@ -63,7 +63,7 @@ export const listofUsers = async (req, res) => {
 
 export const sendMessage = async (req, res) => {
   try {
-    const { message, type , phone } = req.body;
+    const { message, type, phone } = req.body;
     console.log(req.body);
     const contentToSend = message.content || null;
     const contentLinkToSend = message.content_link || null;
@@ -98,7 +98,7 @@ export const sendMessage = async (req, res) => {
         participant: phone,
         messages: [],
         sms: [],
-        mails : [],
+        mails: [],
       });
       console.log("new Convo created");
     }
@@ -107,10 +107,10 @@ export const sendMessage = async (req, res) => {
     if (type === 'whatsapp') {
       data.messages.push(message);
     }
-    else if(type ==='sms') {
+    else if (type === 'sms') {
       data.sms.push(message);
     }
-    else{
+    else {
       data.mails.push(message)
     }
     await data.save();
@@ -151,14 +151,24 @@ export const getChatbyNumber = async (req, res) => {
           .reverse()
           .slice(skip, skip + limit); // reverse and paginate
       }
-      else {
+      else if (type === 'mail') {
         totalMessages = data.mails.length;
         response.messages = data.mails
           .slice()
           .reverse()
           .slice(skip, skip + limit); // reverse and paginate
       }
+      else {
+        const error = new Error('Type is Invalid');
+        error.status = 400;
+        throw error;
+      }
       response.hasMore = skip + limit < totalMessages; // check if there are more messages to load
+    }
+    else {
+      const error = new Error('Data not found for the participant');
+      error.status = 400;
+      throw error;
     }
     res.status(200).json(response);
   } catch (error) {
@@ -171,6 +181,7 @@ export const getChatbyNumber = async (req, res) => {
 export const getUnreadcount = async (req, res) => {
   try {
     const service = req.query.service;
+
     console.log(service);
     const conversations = await Conversation.find({});
     const unreadCountsArray = conversations.map(conv => {
@@ -179,10 +190,14 @@ export const getUnreadcount = async (req, res) => {
         unreadCount = conv.unreadSms;
       } else if (service === 'mail') {
         unreadCount = conv.unreadMails;
-      } else {
+      } else if (service === 'whatsapp') {
         unreadCount = conv.unreadCount;
       }
-      console.log(conv.participant);
+      else {
+        const error = new Error('Service query parameter is Invalid');
+        error.status = 400;
+        throw error;
+      }
       return {
         phone: conv.participant,
         unreadCount: unreadCount,
@@ -191,8 +206,8 @@ export const getUnreadcount = async (req, res) => {
 
     res.status(200).json(unreadCountsArray);
   } catch (error) {
-    console.error('Error fetching unread counts:', error);
-    res.status(500).json({ message: 'Error fetching unread counts' });
+    console.error('Error fetching unread counts:');
+    res.status(500).json({ message: error.message });
   }
 };
 

@@ -6,10 +6,10 @@ import { Server } from "socket.io";
 import http from "http";
 import { queueService } from "./Services/queue.service.js";
 import Conversation from "./Models/chat.model.js";
-import dotenv from 'dotenv';
-import sgMail from '@sendgrid/mail';
+import dotenv from "dotenv";
 import getPhoneNumber from "./utils/emailService.js";
-
+import AIroute from "./api/Routes/GPT.route.js";
+import setupSwagger from "./swaggerConfig.js";
 
 dotenv.config();
 
@@ -23,8 +23,12 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Setup Swagger
+setupSwagger(app);
+
 // Routes
 app.use("/api/user", userRoute);
+app.use("/api/AI", AIroute);
 
 // Create HTTP server and initialize Socket.io
 const server = http.createServer(app);
@@ -49,29 +53,26 @@ io.on("connection", (socket) => {
     });
   }
   // Handle socket events here
-  socket.on('updateReadcount', async ({ count, activeService }) => {
+  socket.on("updateReadcount", async ({ count, activeService }) => {
     const data = await Conversation.findOne({ participant: count });
     if (data) {
-      if (activeService === 'sms') {
+      if (activeService === "sms") {
         data.unreadSms = 0;
-      }
-      else if (activeService === 'whatsapp') {
+      } else if (activeService === "whatsapp") {
         data.unreadCount = 0;
-      }
-      else {
+      } else {
         data.unreadMails = 0;
       }
       await data.save();
     }
-
-  })
-  socket.on('changeUser', ({chat}) => {
+  });
+  socket.on("changeUser", ({ chat }) => {
     console.log(`User came : ${chat}`);
     currentUser = chat;
-  })
-  socket.on('NewUsers', (list) => {
+  });
+  socket.on("NewUsers", (list) => {
     ListofUsers = list;
-  })
+  });
   socket.on("disconnect", () => {
     connectedSockets = connectedSockets.filter(
       (soc) => soc.socketId !== socket.id
@@ -87,15 +88,13 @@ queueService.addMessageHandler(async (messageData) => {
   console.log("Processing message:", messageData);
   let from, to, phone;
   // For New service modify the sender and receiver here.
-  if (messageData.type === 'sms') {
+  if (messageData.type === "sms") {
     from = messageData.from.slice(1);
     to = messageData.to.slice(1);
-  }
-  else if (messageData.type === 'whatsapp') {
+  } else if (messageData.type === "whatsapp") {
     from = messageData.from.slice(10);
     to = messageData.to.slice(10);
-  }
-  else {
+  } else {
     from = messageData.from;
     to = messageData.to;
     phone = getPhoneNumber(from, ListofUsers);
@@ -103,10 +102,12 @@ queueService.addMessageHandler(async (messageData) => {
   let unreadmsg = null;
   // Making a new conversation if the sender is new..
   try {
-    let data = await Conversation.findOne({ participant: (messageData.type === 'mail') ? phone : from });
+    let data = await Conversation.findOne({
+      participant: messageData.type === "mail" ? phone : from,
+    });
     if (!data) {
       data = new Conversation({
-        participant: messageData.type === 'mail' ? phone : from,
+        participant: messageData.type === "mail" ? phone : from,
         messages: [],
         sms: [],
         mails: [],
@@ -144,7 +145,7 @@ queueService.addMessageHandler(async (messageData) => {
 
     // handle unreadMessage logic here...
     console.log(currentUser);
-    if (messageData.type === 'sms') {
+    if (messageData.type === "sms") {
       console.log("in SMS");
       if (currentUser !== null && currentUser.phoneNumber !== from) {
         console.log("unreadSMS count increase..");
@@ -156,8 +157,7 @@ queueService.addMessageHandler(async (messageData) => {
 
         data.unreadSms += 1;
       }
-    }
-    else if (messageData.type === 'whatsapp') {
+    } else if (messageData.type === "whatsapp") {
       console.log("in whatsapp");
       if (currentUser !== null && currentUser.phoneNumber !== from) {
         console.log("unreadWhatsapp count increase..");
@@ -167,10 +167,9 @@ queueService.addMessageHandler(async (messageData) => {
         console.log("unreadWhatsapp count increase..");
         data.unreadCount += 1;
       }
-    }
-    else {
+    } else {
       console.log("IN mail");
-      console.log("from : " , from);
+      console.log("from : ", from);
       if (currentUser !== null && currentUser.Email !== from) {
         console.log("unreadMail count increase..");
         data.unreadMails += 1;
@@ -180,15 +179,18 @@ queueService.addMessageHandler(async (messageData) => {
         data.unreadMails += 1;
       }
     }
-    unreadmsg = messageData.type === 'sms' ? data.unreadSms : (messageData.type === 'whatsapp') ? data.unreadCount : data.unreadMails;
+    unreadmsg =
+      messageData.type === "sms"
+        ? data.unreadSms
+        : messageData.type === "whatsapp"
+          ? data.unreadCount
+          : data.unreadMails;
     // save data according to the message type here..
-    if (messageData.type === 'sms') {
+    if (messageData.type === "sms") {
       data.sms.push(newMessage);
-    }
-    else if (messageData.type === 'whatsapp') {
+    } else if (messageData.type === "whatsapp") {
       data.messages.push(newMessage);
-    }
-    else {
+    } else {
       data.mails.push(newMessage);
     }
     await data.save();
@@ -202,17 +204,20 @@ queueService.addMessageHandler(async (messageData) => {
     if (!SOCKET) {
       return;
     }
-    if (messageData.type === 'mail') {
+    if (messageData.type === "mail") {
       if (currentUser !== null && from === currentUser.Email) {
         io.to(SOCKET.socketId).emit("receiveMessage", newMessage);
       }
-    }
-    else {
+    } else {
       if (currentUser !== null && from === currentUser.phoneNumber) {
         io.to(SOCKET.socketId).emit("receiveMessage", newMessage);
       }
     }
-    io.to(SOCKET.socketId).emit("unreadMessages", { newMessage, unreadmsg, ListofUsers });
+    io.to(SOCKET.socketId).emit("unreadMessages", {
+      newMessage,
+      unreadmsg,
+      ListofUsers,
+    });
   } catch (error) {
     console.log("Error in storing message in reciever side", error.message);
   }
@@ -220,7 +225,6 @@ queueService.addMessageHandler(async (messageData) => {
 
 // Start listening for messages when the app starts
 queueService.startListening().catch(console.error);
-
 
 // Graceful shutdown
 process.on("SIGINT", async () => {
