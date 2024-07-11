@@ -77,6 +77,7 @@ io.on("connection", (socket) => {
     connectedSockets = connectedSockets.filter(
       (soc) => soc.socketId !== socket.id
     );
+    currentUser = null;
     console.log("A user disconnected");
   });
 });
