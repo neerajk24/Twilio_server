@@ -165,11 +165,6 @@ export const getChatbyNumber = async (req, res) => {
       }
       response.hasMore = skip + limit < totalMessages; // check if there are more messages to load
     }
-    else {
-      const error = new Error('Data not found for the participant');
-      error.status = 400;
-      throw error;
-    }
     res.status(200).json(response);
   } catch (error) {
     res
