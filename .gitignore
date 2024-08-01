@@ -1,0 +1,7 @@
+# Ignore node_modules in the root directory
+node_modules/
+.env
+
+# Ignore node_modules in the whatsAppClone directory
+whatsAppClone/node_modules/
+whatsAppClone/.env

@@ -13,6 +13,8 @@ import {
   StorageSharedKeyCredential,
   SASProtocol,
 } from "@azure/storage-blob";
+import { twilioPhoneNumber, twilioSMSNumber, twilioVendorEmail } from "../../Services/twilio.service.js";
+
 const parseXml = promisify(parseString);
 
 export const listofUsers = async (req, res) => {
@@ -50,6 +52,7 @@ export const listofUsers = async (req, res) => {
       phoneNumber: caseData.PhoneNumber[0],
       caseId: caseData.CaseId[0],
       Email: caseData.Email[0],
+      startChat: false
     }));
     // Send the formatted data as JSON response
     res.json(formattedData);
@@ -70,27 +73,27 @@ export const sendMessage = async (req, res) => {
     const subjectOfEmail = message.subject || null;
 
     let response;
-    if (type === "whatsapp") {
+    if (type.whatsapp) {
       response = await sendWhatsAppMessage(
         message.receiver_id,
         contentToSend,
         contentLinkToSend
       );
-    } else if (type === "sms") {
+    }
+    if (type.sms) {
       response = await sendSMSMessage(
         message.receiver_id,
         contentToSend,
         contentLinkToSend
       );
-    } else if (type === "mail") {
+    }
+    if (type.mail) {
       response = await sendEmailMessage(
         message.receiver_id,
         contentToSend,
         subjectOfEmail,
         contentLinkToSend
       );
-    } else {
-      throw new Error("Unsupported message type");
     }
     let data = await Conversation.findOne({ participant: phone });
     if (!data) {
@@ -99,20 +102,22 @@ export const sendMessage = async (req, res) => {
         messages: [],
         sms: [],
         mails: [],
+        timeline: [],
       });
       console.log("new Convo created");
     }
     message["messageSid"] = response.messageSid;
     message["accountSid"] = response.accountSid;
-    if (type === 'whatsapp') {
+    if (type.whatsapp) {
       data.messages.push(message);
     }
-    else if (type === 'sms') {
+    if (type.sms) {
       data.sms.push(message);
     }
-    else {
+    if (type.mail) {
       data.mails.push(message)
     }
+    data.timeline.push(message);
     await data.save();
     console.log("Data saved in mongo successfully");
     res.status(200).json({
@@ -130,10 +135,8 @@ export const getChatbyNumber = async (req, res) => {
     console.log('GettingChat..');
     const { number, page = 1, limit = 20, type } = req.body; // page and limit for pagination
     const skip = (page - 1) * limit; // calculate the number of documents to skip
-
     const data = await Conversation.findOne({ participant: number });
     let response = { messages: [], hasMore: false };
-
     if (data) {
       // Change for a new service
       let totalMessages;
@@ -154,6 +157,13 @@ export const getChatbyNumber = async (req, res) => {
       else if (type === 'mail') {
         totalMessages = data.mails.length;
         response.messages = data.mails
+          .slice()
+          .reverse()
+          .slice(skip, skip + limit); // reverse and paginate
+      }
+      else if (type === 'timeline') {
+        totalMessages = data.timeline.length;
+        response.messages = data.timeline
           .slice()
           .reverse()
           .slice(skip, skip + limit); // reverse and paginate

@@ -13,9 +13,9 @@ const client = twilio(accountSid, authToken);
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 
-const twilioPhoneNumber = 'whatsapp:+14155238886';
-const twilioSMSNumber = '+447380300545';
-const twilioVendorEmail = "neeraj.kumar@catura.co.uk";
+export const twilioPhoneNumber = 'whatsapp:+14155238886';
+export const twilioSMSNumber = '+447380300545';
+export const twilioVendorEmail = "neeraj.kumar@catura.co.uk";
 
 export const sendWhatsAppMessage = async (to, content, contentLink) => {
   console.log(`twilioPhone : ${twilioPhoneNumber} , to : ${to}`);

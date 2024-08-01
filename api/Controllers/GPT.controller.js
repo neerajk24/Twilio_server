@@ -54,44 +54,78 @@ export const getSummary = async (req, res) => {
 
 export const getRelevantInfo = async (req, res) => {
     try {
-        const { convoID } = req.query;
-        // Fetch the conversation from MongoDB
-        const conversation = await Conversation.findOne({ participant: convoID });
+        const { phoneNumber, messages } = req.body;
 
-        if (!conversation) {
-            console.log('Conversation not found');
-            return;
-        }
+        // Extract and format messages (your existing code)
+        const formattedMessages = messages
+            .filter(msg => msg.content_type === 'text')
+            .map(msg => {
+                const date = new Date(msg.timestamp);
+                const formattedTimestamp = date.toLocaleString('en-IN', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: true,
+                    timeZone: 'Asia/Kolkata'
+                });
 
-        // Extract and format messages
-        const formattedMessages = conversation.messages
-            .filter(msg => msg.content_type === 'text') // Only include text messages
-            .map(msg => `${msg.sender_id === conversation.participant ? 'User1' : 'User2'}: ${msg.content}`)
+                return `[${formattedTimestamp}] ${msg.sender_id === phoneNumber ? 'User' : 'Agent'}: ${msg.content}`;
+            })
             .join('\n');
 
-        // Prepare the prompt for OpenAI
-        const messages = [
+        console.log(formattedMessages);
+        // Prepare the prompt for OpenAI with enhanced instructions
+        const message = [
             {
                 role: "system",
-                content: "You are an AI assistant tasked with extraction of any relevant information like Email , passwords , links or any other confidential data shared in chat make sure to format it correctly."
+                content: `You are an AI assistant tasked with extracting the most recent address information from a chat conversation. The moment you read first address thats it save it. 
+                Please format the address in the following structure:
+                {
+                    "AddressLine1": "",
+                    "AddressLine2": "",
+                    "City": "",
+                    "Region": "",
+                    "PostalCode": "",
+                    "Country": ""
+                }
+                If any field is not found in the chat, leave it as an empty string. If no address information is found at all, return an empty object with all fields as empty strings. Remember, only return the most recent address based on the timestamp.`
             },
             {
                 role: "user",
-                content: `This is the chat :\n\n${formattedMessages}`
+                content: `Extract the most recent address information from this chat, paying close attention to the timestamps:\n\n${formattedMessages}`
             }
         ];
 
         // Call OpenAI API
         const completion = await openai.chat.completions.create({
             model: "gpt-3.5-turbo",
-            messages: messages,
-            max_tokens: 100  // Adjust as needed
+            messages: message,
+            max_tokens: 300  // Increased to allow for more detailed response
         });
 
-        // console.log('Summary:', completion.choices[0].message.content);
-        res.status(200).json({ Response: completion.choices[0].message.content });
+        // Parse the response
+        let addressData;
+        try {
+            addressData = JSON.parse(completion.choices[0].message.content);
+        } catch (error) {
+            console.error('Error parsing GPT response:', error);
+            addressData = {
+                AddressLine1: "",
+                AddressLine2: "",
+                City: "",
+                Region: "",
+                PostalCode: "",
+                Country: ""
+            };
+        }
+
+        res.status(200).json(addressData);
 
     } catch (error) {
+        console.error('Error in getRelevantInfo:', error);
         res.status(500).json({ error: error.message });
     }
 }

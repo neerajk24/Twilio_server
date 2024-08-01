@@ -4,7 +4,7 @@
     "whatsappClone"
   ],
   "scripts": {
-    "start": "node app.js"
+    "start": "node server.js"
   },
   "dependencies": {
     "@azure/service-bus": "^7.9.5",
@@ -18,12 +18,17 @@
     "express": "^4.19.2",
     "mongoose": "^8.4.3",
     "nodemon": "^3.1.4",
+    "open": "^10.1.0",
     "openai": "^4.52.3",
+    "querystring": "^0.2.1",
     "react-infinite-scroll-component": "^6.1.0",
+    "react-router-dom": "^6.24.1",
     "socket.io": "^4.7.5",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",
     "twilio": "^5.2.0",
+    "uuid": "^10.0.0",
+    "xero-node": "^9.0.0",
     "xml2js": "^0.6.2"
   }
 }

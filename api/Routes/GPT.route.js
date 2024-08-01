@@ -38,7 +38,7 @@ router.get("/getSummary", getSummary);
 /**
  * @swagger
  * /api/AI/getRelevantInfo:
- *   get:
+ *   post:
  *     summary: Get relevant information from a conversation
  *     tags : [AI]
  *     parameters:
@@ -52,7 +52,7 @@ router.get("/getSummary", getSummary);
  *       200:
  *         description: A successful response
  */
-router.get("/getRelevantInfo", getRelevantInfo);
+router.post("/getRelevantInfo", getRelevantInfo);
 
 /**
  * @swagger
