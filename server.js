@@ -23,7 +23,7 @@ setupQueueService(io);
 const PORT = process.env.WEBSITES_PORT || 5000;
 server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
-    initiateAuth();
+    // initiateAuth();
 });
 
 // Export the io instance if needed in other modules

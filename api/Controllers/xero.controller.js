@@ -216,9 +216,10 @@ let refreshToken = null;
 let tenantId = null;
 let tokenExpiresAt = null;
 
-export const initiateAuth = () => {
+export const initiateAuth = (req, res) => {
     const authUrl = `${AUTHORIZATION_URL}?response_type=code&client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}&scope=openid profile email accounting.contacts offline_access&state=123`;
-    open(authUrl);
+    // open(authUrl);
+    res.redirect(authUrl);
 };
 
 export const handleCallback = async (req, res) => {
