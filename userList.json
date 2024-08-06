@@ -1,0 +1,119 @@
+[
+  {
+    "name": "Neeraj Kumar_UK",
+    "phoneNumber": "447747209662",
+    "caseId": "883cf947-1356-4826-b732-bfb9d14a3563",
+    "Email": "neerajsk24@gmail.com",
+    "startChat": false,
+    "Addresses": [
+      {
+        "AddressType": "POBOX"
+      },
+      {
+        "AddressType": "STREET"
+      }
+    ]
+  },
+  {
+    "name": "Keshav Vats",
+    "phoneNumber": "",
+    "caseId": "da524da0-2f96-4a87-a6a9-808122f76148",
+    "Email": "keshav21@gmail.com",
+    "startChat": false,
+    "Addresses": [
+      {
+        "AddressType": "POBOX",
+        "City": "Delhi",
+        "Region": "Delhi",
+        "PostalCode": "401010",
+        "Country": "India"
+      },
+      {
+        "AddressType": "STREET",
+        "City": "Delhi",
+        "Region": "Delhi",
+        "PostalCode": "401010",
+        "Country": "India"
+      }
+    ]
+  },
+  {
+    "name": "Test User",
+    "phoneNumber": "",
+    "caseId": "f208ec10-e76c-45ae-826e-8077f0efeebf",
+    "Email": "testuser@example.com",
+    "startChat": false,
+    "Addresses": [
+      {
+        "AddressType": "STREET",
+        "AddressLine1": "123 Test Street",
+        "City": "Test City",
+        "Region": "Test Region",
+        "PostalCode": "12345",
+        "Country": "Test Country"
+      },
+      {
+        "AddressType": "POBOX",
+        "AddressLine1": "123 Test Street",
+        "City": "Test City",
+        "Region": "Test Region",
+        "PostalCode": "12345",
+        "Country": "Test Country"
+      }
+    ]
+  },
+  {
+    "name": "Shriram Bhardwaj",
+    "phoneNumber": "918851144028",
+    "caseId": "2114110171",
+    "Email": "bladehyper03@gmail.com",
+    "startChat": false,
+    "Addresses": [
+      {
+        "AddressType": "STREET",
+        "AddressLine1": "H664, Gaur cascades society",
+        "AddressLine2": "",
+        "City": "Ghaziabad",
+        "Region": "Uttar Pradesh",
+        "PostalCode": "411046",
+        "Country": "India"
+      },
+      {
+        "AddressType": "POBOX",
+        "AddressLine1": "H664, Gaur cascades society",
+        "AddressLine2": "",
+        "City": "Ghaziabad",
+        "Region": "Uttar Pradesh",
+        "PostalCode": "411046",
+        "Country": "India"
+      }
+    ]
+  },
+  {
+    "name": "Rajat Raj Sharma",
+    "phoneNumber": "917666374530",
+    "caseId": "21113030",
+    "Email": "sharmarajatraj1@gmail.com",
+    "startChat": false,
+    "Addresses": [
+      {
+        "AddressType": "STREET",
+        "AddressLine1": "Flat - A8, near Bus stop, Lohegaon",
+        "AddressLine2": "",
+        "City": "Pune",
+        "Region": "Maharashtra",
+        "PostalCode": "455555",
+        "Country": "India"
+      },
+      {
+        "AddressType": "POBOX",
+        "AddressLine1": "Flat - A8, near Bus stop, Lohegaon",
+        "AddressLine2": "",
+        "City": "Pune",
+        "Region": "Maharashtra",
+        "PostalCode": "455555",
+        "Country": "India"
+      }
+    ]
+  }
+]

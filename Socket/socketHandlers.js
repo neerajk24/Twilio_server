@@ -79,8 +79,11 @@ const handleChatStarted = (response, io) => {
 const handleChatEnded = (response, io) => {
     console.log(`Chat Ended : ${response.client} , ${response.vendor}`);
     connections = connections.filter(conn => conn.client.phoneNumber !== response.client.phoneNumber && conn.vendor !== response.vendor);
+    console.log("connectionEnded : ", connections);
+
     const newListofuser = FilterUserConnections(connections, ListofUsers);
     ListofUsers = newListofuser;
+    console.log(ListofUsers);
     io.emit('NewConnection', ListofUsers);
 };
 
